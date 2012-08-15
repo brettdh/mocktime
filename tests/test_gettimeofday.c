@@ -1,7 +1,14 @@
 #include "mocktime.h"
 #include "ctest.h"
 
-CTEST(test_gettimeofday, time_observed)
+CTEST_DATA(test_gettimeofday) {};
+
+CTEST_SETUP(test_gettimeofday)
+{
+    mocktime_enable_mocking();
+}
+
+CTEST2(test_gettimeofday, time_observed)
 {
     struct timeval mock_now = {42, 42};
     mocktime_settimeofday(&mock_now, NULL);

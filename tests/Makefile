@@ -2,7 +2,7 @@ CFLAGS=-Wall -Werror -g -I.. -m32 -pthread
 LDFLAGS=
 LIBS=../libmocktime.so
 
-TESTS=test_gettimeofday.o
+TESTS=test_gettimeofday.o test_sleep.o
 
 all: run_tests
 
