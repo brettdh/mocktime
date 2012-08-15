@@ -5,12 +5,18 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-void mocktime_enable_mocking();
-void mocktime_disable_mocking();
+#ifdef __cplusplus
+#define CDECL extern "C"
+#else
+#define CDECL
+#endif
 
-int mocktime_gettimeofday(struct timeval *tv, struct timezone *unused);
-int mocktime_settimeofday(const struct timeval *tv, const struct timezone *unused);
+CDECL void mocktime_enable_mocking();
+CDECL void mocktime_disable_mocking();
 
-int mocktime_usleep(useconds_t useconds);
+CDECL int mocktime_gettimeofday(struct timeval *tv, struct timezone *unused);
+CDECL int mocktime_settimeofday(const struct timeval *tv, const struct timezone *unused);
+
+CDECL int mocktime_usleep(useconds_t useconds);
 
 #endif

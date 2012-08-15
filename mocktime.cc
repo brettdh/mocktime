@@ -56,8 +56,8 @@ struct mocked_fn {
 };
 
 static struct mocked_fn mocked_fns[] = {
-    {(void**)&gettimeofday_fn, gettimeofday_mocked, gettimeofday},
-    {(void**)&usleep_fn, usleep_mocked, usleep},
+    {(void **)&gettimeofday_fn, (void *) gettimeofday_mocked, (void *) gettimeofday},
+    {(void **)&usleep_fn, (void *) usleep_mocked, (void *) usleep},
 };
 static const size_t NUM_FNS = sizeof(mocked_fns) / sizeof(struct mocked_fn);
 

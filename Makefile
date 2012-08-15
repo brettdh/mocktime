@@ -1,15 +1,15 @@
 LIBRARY := libmocktime.so
-CFLAGS := -g -Wall -Werror
+CXXFLAGS := -g -Wall -Werror
 
 all: $(LIBRARY)
 
 OBJS := mocktime.o
 
 $(LIBRARY): $(OBJS)
-	gcc -o $@ -shared $^ $(LDFLAGS)
+	$(CXX) -o $@ -shared $^ $(LDFLAGS)
 
-%.o: %.c
-	gcc -c -o $@ $< $(CFLAGS)
+%.o: %.cc
+	$(CXX) -c -o $@ $< $(CXXFLAGS)
 
 clean:
 	rm -f $(LIBRARY) *.o *~
