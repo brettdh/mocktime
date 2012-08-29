@@ -1,5 +1,6 @@
 LIBRARY := libmocktime.so
-CXXFLAGS := -g -Wall -Werror
+CXXFLAGS := -g -Wall -Werror -pthread
+LDFLAGS := -lpthread
 
 all: $(LIBRARY)
 

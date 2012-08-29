@@ -19,4 +19,10 @@ CDECL int mocktime_settimeofday(const struct timeval *tv, const struct timezone 
 
 CDECL int mocktime_usleep(useconds_t useconds);
 
+CDECL int mocktime_pthread_create(pthread_t *tid, const pthread_attr_t *attr, 
+                                  void *(*thread_fn)(void*), void *arg);
+CDECL int mocktime_pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, 
+                                          const struct timespec *abstime);
+CDECL int mocktime_pthread_cond_signal(pthread_cond_t *cond);
+
 #endif
