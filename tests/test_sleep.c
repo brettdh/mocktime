@@ -27,4 +27,9 @@ CTEST2(test_sleep, later_time_observed)
     mocktime_gettimeofday(&test_time, NULL);
     mock_now.tv_sec = 43;
     ASSERT_TIMEVAL_EQUAL(mock_now, test_time);
+
+    mocktime_usleep(3000);
+    mocktime_gettimeofday(&test_time, NULL);
+    mock_now.tv_usec = 3042;
+    ASSERT_TIMEVAL_EQUAL(mock_now, test_time);
 }
