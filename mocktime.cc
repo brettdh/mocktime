@@ -210,7 +210,7 @@ static void sleep_and_wake_others(const struct timespec *abstime,
 
     // sorted iteration by waiter.abstime
     for (WaitingThreadsSet::iterator it = waiting_threads.begin();
-         it != waiting_threads.end(); /* advance in loop */) {
+         it != waiting_threads.end(); ++it) {
         waiting_thread *waiter = *it;
         struct timeval waiter_abstime_tv;
         waiter_abstime_tv.tv_sec = waiter->abstime.tv_sec;
@@ -219,8 +219,6 @@ static void sleep_and_wake_others(const struct timespec *abstime,
             // all waiters are waiting longer than for this one thread
             break;
         } else {
-            waiting_threads.erase(it++);
-            
             set_time_possibly_locked(&waiter_abstime_tv, mutex);
             pthread_mutex_lock(waiter->mutex);
             pthread_cond_broadcast(waiter->cond);
@@ -273,14 +271,24 @@ int pthread_cond_timedwait_mocked(pthread_cond_t *cond, pthread_mutex_t *mutex,
     return rc;
 }
 
-int pthread_cond_signal_mocked(pthread_cond_t *cond)
+static void mark_cv_signalled(pthread_cond_t *cond)
 {
     pthread_mutex_lock(&threads_lock);
     struct waiting_thread *waiter = waiting_threads_by_cv[cond];
     waiter->actually_signalled = true;
     pthread_mutex_unlock(&threads_lock);
+}
 
+int pthread_cond_signal_mocked(pthread_cond_t *cond)
+{
+    mark_cv_signalled(cond);
     return pthread_cond_signal(cond);
+}
+
+int pthread_cond_broadcast_mocked(pthread_cond_t *cond)
+{
+    mark_cv_signalled(cond);
+    return pthread_cond_broadcast(cond);
 }
 
 static int (*gettimeofday_fn)(struct timeval *, struct timezone *) = gettimeofday;
@@ -290,6 +298,7 @@ static int (*pthread_create_fn)(pthread_t *, const pthread_attr_t *,
 static int (*pthread_cond_timedwait_fn)(pthread_cond_t *, pthread_mutex_t *, 
                                         const struct timespec *) = pthread_cond_timedwait;
 static int (*pthread_cond_signal_fn)(pthread_cond_t *) = pthread_cond_signal;
+static int (*pthread_cond_broadcast_fn)(pthread_cond_t *) = pthread_cond_broadcast;
 
 struct mocked_fn {
     void **fn_ptr;
@@ -303,6 +312,7 @@ static struct mocked_fn mocked_fns[] = {
     {(void **)&pthread_create_fn, (void *) pthread_create_mocked, (void *) pthread_create},
     {(void **)&pthread_cond_timedwait_fn, (void *) pthread_cond_timedwait_mocked, (void *) pthread_cond_timedwait},
     {(void **)&pthread_cond_signal_fn, (void *) pthread_cond_signal_mocked, (void *) pthread_cond_signal},
+    {(void **)&pthread_cond_broadcast_fn, (void *) pthread_cond_broadcast_mocked, (void *) pthread_cond_broadcast},
 };
 static const size_t NUM_FNS = sizeof(mocked_fns) / sizeof(struct mocked_fn);
 
@@ -344,6 +354,11 @@ int mocktime_pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex
 int mocktime_pthread_cond_signal(pthread_cond_t *cond)
 {
     return pthread_cond_signal_fn(cond);
+}
+
+int mocktime_pthread_cond_broadcast(pthread_cond_t *cond)
+{
+    return pthread_cond_broadcast_fn(cond);
 }
 
 void mocktime_enable_mocking()

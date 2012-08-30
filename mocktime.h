@@ -24,5 +24,6 @@ CDECL int mocktime_pthread_create(pthread_t *tid, const pthread_attr_t *attr,
 CDECL int mocktime_pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, 
                                           const struct timespec *abstime);
 CDECL int mocktime_pthread_cond_signal(pthread_cond_t *cond);
+CDECL int mocktime_pthread_cond_broadcast(pthread_cond_t *cond);
 
 #endif
