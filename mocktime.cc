@@ -29,6 +29,7 @@
 
 static struct timeval mocked_time;
 static pthread_mutex_t mocked_time_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mocked_time_sleep_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t mocked_time_sleep_cv = PTHREAD_COND_INITIALIZER;
 
 static int gettimeofday_mocked(struct timeval *tv, struct timezone *unused)
@@ -57,13 +58,18 @@ static int usleep_mocked(useconds_t useconds)
 
     struct timeval future;
     timeradd(&mocked_time, &sleep_duration, &future);
+    pthread_mutex_unlock(&mocked_time_lock);
+
     struct timespec future_ts;
     future_ts.tv_sec = future.tv_sec;
     future_ts.tv_nsec = future.tv_usec * 1000;
 
-    pthread_cond_timedwait_mocked(&mocked_time_sleep_cv, &mocked_time_lock,
+    pthread_mutex_lock(&mocked_time_sleep_lock);
+    pthread_cond_timedwait_mocked(&mocked_time_sleep_cv, &mocked_time_sleep_lock,
                                   &future_ts);
-    pthread_mutex_unlock(&mocked_time_lock);
+    pthread_mutex_unlock(&mocked_time_sleep_lock);
+
+    sched_yield();
 
     return 0;
 }
@@ -140,13 +146,13 @@ int pthread_create_mocked(pthread_t *tid, const pthread_attr_t *attr,
     }
     
     pthread_t new_thread;
-    pthread_create(&new_thread, attr, MocktimeWrapperThreadFn, wrap_args);
+    int rc = pthread_create(&new_thread, attr, MocktimeWrapperThreadFn, wrap_args);
     child_threads.insert(new_thread);
     if (tid) {
         *tid = new_thread;
     }
     pthread_mutex_unlock(&threads_lock);
-    return new_thread;
+    return rc;
 }
 
 /* must be holding thread_lock. */
@@ -176,26 +182,6 @@ static bool all_other_threads_are_sleeping()
     return true;
 }
 
-static void get_time_possibly_locked(struct timeval *tv, pthread_mutex_t *mutex)
-{
-    assert(tv);
-    if (mutex == &mocked_time_lock) {
-        *tv = mocked_time;
-    } else {
-        mocktime_gettimeofday(tv, NULL);
-    }
-}
-
-static void set_time_possibly_locked(const struct timeval *tv, pthread_mutex_t *mutex)
-{
-    assert(tv);
-    if (mutex == &mocked_time_lock) {
-        mocked_time = *tv;
-    } else {
-        mocktime_settimeofday(tv, NULL);
-    }
-}
-
 /* mock-sleep this thread until abstime,
  * waking any threads that wanted to wake up earlier */
 /* must be holding thread_lock. */
@@ -219,13 +205,13 @@ static void sleep_and_wake_others(const struct timespec *abstime,
             // all waiters are waiting longer than for this one thread
             break;
         } else {
-            set_time_possibly_locked(&waiter_abstime_tv, mutex);
+            mocktime_settimeofday(&waiter_abstime_tv, NULL);
             pthread_mutex_lock(waiter->mutex);
             pthread_cond_broadcast(waiter->cond);
             pthread_mutex_unlock(waiter->mutex);
         }
     }
-    set_time_possibly_locked(&abstime_tv, mutex);
+    mocktime_settimeofday(&abstime_tv, NULL);
 }
 
 int pthread_cond_timedwait_mocked(pthread_cond_t *cond, pthread_mutex_t *mutex, 
@@ -234,7 +220,7 @@ int pthread_cond_timedwait_mocked(pthread_cond_t *cond, pthread_mutex_t *mutex,
     int rc = 0;
 
     struct timeval now, abstime_tv;
-    get_time_possibly_locked(&now, mutex);
+    mocktime_gettimeofday(&now, NULL);
     
     assert(abstime);
     abstime_tv.tv_sec = abstime->tv_sec;
@@ -244,6 +230,11 @@ int pthread_cond_timedwait_mocked(pthread_cond_t *cond, pthread_mutex_t *mutex,
     if (all_other_threads_are_sleeping()) {
         // I'm the only runnable thread, so this is just a sleep.
         sleep_and_wake_others(abstime, mutex);
+        pthread_mutex_unlock(&threads_lock);
+        pthread_mutex_unlock(mutex);
+        sched_yield();
+        pthread_mutex_lock(mutex);
+        pthread_mutex_lock(&threads_lock);
         rc = ETIMEDOUT;
     } else {
         struct waiting_thread waiter(pthread_self(), cond, mutex, abstime);
@@ -251,13 +242,13 @@ int pthread_cond_timedwait_mocked(pthread_cond_t *cond, pthread_mutex_t *mutex,
         waiting_threads_by_cv[cond] = &waiter;
         
         pthread_mutex_unlock(&threads_lock);
-        get_time_possibly_locked(&now, mutex);
+        mocktime_gettimeofday(&now, NULL);
         while (timercmp(&now, &abstime_tv, <)) {
             pthread_cond_wait(cond, mutex);
             if (waiter.actually_signalled) {
                 break;
             }
-            get_time_possibly_locked(&now, mutex);
+            mocktime_gettimeofday(&now, NULL);
         }
         if (!waiter.actually_signalled) {
             rc = ETIMEDOUT;
@@ -274,8 +265,11 @@ int pthread_cond_timedwait_mocked(pthread_cond_t *cond, pthread_mutex_t *mutex,
 static void mark_cv_signalled(pthread_cond_t *cond)
 {
     pthread_mutex_lock(&threads_lock);
-    struct waiting_thread *waiter = waiting_threads_by_cv[cond];
-    waiter->actually_signalled = true;
+    if (waiting_threads_by_cv.count(cond) > 0) {
+        struct waiting_thread *waiter = waiting_threads_by_cv[cond];
+        assert(waiter);
+        waiter->actually_signalled = true;
+    }
     pthread_mutex_unlock(&threads_lock);
 }
 
