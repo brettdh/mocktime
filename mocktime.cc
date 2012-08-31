@@ -25,7 +25,7 @@
 
 static struct timeval mocked_time;
 
-static int gettimeofday_mocked(struct timeval *tv, struct timezone *unused)
+static int gettimeofday_mocked(struct timeval *tv, void *unused)
 {
     if (tv) {
         *tv = mocked_time;
@@ -46,7 +46,8 @@ static int usleep_mocked(useconds_t useconds)
     return 0;
 }
 
-static int (*gettimeofday_fn)(struct timeval *, struct timezone *) = gettimeofday;
+static int (*gettimeofday_fn)(struct timeval *, void *) = 
+    (int (*)(struct timeval *, void *)) gettimeofday;
 static int (*usleep_fn)(useconds_t) = usleep;
 
 struct mocked_fn {
@@ -61,12 +62,12 @@ static struct mocked_fn mocked_fns[] = {
 };
 static const size_t NUM_FNS = sizeof(mocked_fns) / sizeof(struct mocked_fn);
 
-int mocktime_gettimeofday(struct timeval *tv, struct timezone *unused)
+int mocktime_gettimeofday(struct timeval *tv, void *unused)
 {
     return gettimeofday_fn(tv, unused);
 }
 
-int mocktime_settimeofday(const struct timeval *tv, const struct timezone *unused)
+int mocktime_settimeofday(const struct timeval *tv, const void *unused)
 {
     if (tv) {
         mocked_time = *tv;
