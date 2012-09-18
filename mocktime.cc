@@ -48,7 +48,7 @@ static int usleep_mocked(useconds_t useconds)
 
 static int (*gettimeofday_fn)(struct timeval *, void *) = 
     (int (*)(struct timeval *, void *)) gettimeofday;
-static int (*usleep_fn)(useconds_t) = usleep;
+static int (*usleep_fn)(useconds_t) = (int (*)(useconds_t)) usleep;
 
 struct mocked_fn {
     void **fn_ptr;
