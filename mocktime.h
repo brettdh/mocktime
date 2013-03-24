@@ -17,6 +17,6 @@ CDECL void mocktime_disable_mocking();
 CDECL int mocktime_gettimeofday(struct timeval *tv, void *unused);
 CDECL int mocktime_settimeofday(const struct timeval *tv, const void *unused);
 
-CDECL int mocktime_usleep(useconds_t useconds);
+CDECL int mocktime_usleep(suseconds_t useconds);
 
 #endif
