@@ -1,5 +1,5 @@
 LIBRARY := libmocktime.so
-CXXFLAGS := -g -Wall -Werror
+CXXFLAGS := -g -Wall -Werror -fpic
 
 all: $(LIBRARY)
 
