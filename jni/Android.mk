@@ -6,7 +6,7 @@ MY_SRCS := mocktime.cc
 MY_CFLAGS := -g -ggdb -O0 -Wall -Werror -DANDROID
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := libmocktime
+LOCAL_MODULE := mocktime
 LOCAL_CPP_EXTENSION := .cc
 LOCAL_C_INCLUDES := $(ANDROID_INCLUDES)
 LOCAL_SRC_FILES := $(addprefix ../, $(MY_SRCS))
