@@ -1,7 +1,5 @@
 LOCAL_PATH := $(call my-dir)
 
-MY_ANDROID_SRC_ROOT := $(HOME)/src/android-source
-
 MY_SRCS := mocktime.cc
 MY_CFLAGS := -g -ggdb -O0 -Wall -Werror -DANDROID
 
@@ -10,6 +8,6 @@ LOCAL_MODULE := mocktime
 LOCAL_CPP_EXTENSION := .cc
 LOCAL_C_INCLUDES := $(ANDROID_INCLUDES)
 LOCAL_SRC_FILES := $(addprefix ../, $(MY_SRCS))
-LOCAL_CFLAGS := $(MY_CFLAGS) 
+LOCAL_CFLAGS := $(MY_CFLAGS)
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/..
 include $(BUILD_SHARED_LIBRARY)
